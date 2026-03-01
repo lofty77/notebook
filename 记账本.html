@@ -518,6 +518,9 @@
       }
 
       function deleteEntry(id) {
+        if (!window.confirm('确认删除这条账目吗？')) {
+          return;
+        }
         var entries = loadEntries().filter(function (entry) {
           return entry.id !== id;
         });

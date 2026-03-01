@@ -42,6 +42,7 @@ class OfflineHtmlRegressionTests(unittest.TestCase):
         self.assertIn("function exportEntries()", self.html)
         self.assertIn("function importEntries(file)", self.html)
         self.assertIn("reader.readAsText(file, 'utf-8');", self.html)
+        self.assertIn("window.confirm('确认删除这条账目吗？')", self.html)
         self.assertIn("window.confirm('确认清空全部账目吗？此操作不能撤销。')", self.html)
         self.assertIn("render();", self.html)
 
