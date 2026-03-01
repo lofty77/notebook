@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>离线记账本</title>
+  <style>
+    :root {
+      --bg: #f3efe6;
+      --panel: rgba(255, 252, 247, 0.94);
+      --ink: #231f1c;
+      --muted: #6b6258;
+      --line: rgba(35, 31, 28, 0.08);
+      --gold: #d7b56d;
+      --green: #2f7d4f;
+      --red: #b24a3b;
+      --shadow: 0 18px 40px rgba(35, 31, 28, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top right, rgba(215, 181, 109, 0.35), transparent 30%),
+        radial-gradient(circle at bottom left, rgba(47, 125, 79, 0.12), transparent 25%),
+        linear-gradient(135deg, #f6f0e3, #efe7dc 45%, #ece5da);
+    }
+
+    button, input, select, textarea { font: inherit; }
+
+    .page {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 32px 0 48px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 20px;
+      align-items: end;
+      margin-bottom: 24px;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+    }
+
+    h1, h2 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    h1 {
+      font-size: clamp(34px, 5vw, 56px);
+      line-height: 1;
+    }
+
+    .subtitle {
+      margin: 12px 0 0;
+      max-width: 42ch;
+      color: var(--muted);
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+    }
+
+    .card, .panel {
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: 20px;
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+    }
+
+    .card { padding: 18px; }
+
+    .card span {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .card strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 28px;
+    }
+
+    .currency-card {
+      display: grid;
+      gap: 12px;
+    }
+
+    .currency-label {
+      font-size: 12px;
+      letter-spacing: 0.12em;
+    }
+
+    .summary-item {
+      display: grid;
+      gap: 4px;
+    }
+
+    .income-text { color: var(--green); }
+    .expense-text { color: var(--red); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 20px;
+    }
+
+    .panel { padding: 22px; }
+
+    .entry-form {
+      display: grid;
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    label {
+      display: grid;
+      gap: 8px;
+      font-size: 14px;
+    }
+
+    input, select, textarea, button {
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    button {
+      cursor: pointer;
+      border: 0;
+      background: linear-gradient(135deg, #2d2a26, #4c443b);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    button:hover { opacity: 0.94; }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .toolbar button.secondary,
+    .delete-btn {
+      background: rgba(35, 31, 28, 0.08);
+      color: var(--ink);
+    }
+
+    .toolbar button.warn,
+    .delete-btn.warn {
+      background: rgba(178, 74, 59, 0.12);
+      color: var(--red);
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .panel-head span,
+    .empty-state,
+    .hint {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 14px 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      font-size: 14px;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+    }
+
+    .tag.income {
+      background: rgba(47, 125, 79, 0.12);
+      color: var(--green);
+    }
+
+    .tag.expense {
+      background: rgba(178, 74, 59, 0.12);
+      color: var(--red);
+    }
+
+    .delete-btn {
+      padding: 8px 12px;
+      border-radius: 10px;
+    }
+
+    .empty-state { padding: 24px 0 8px; }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 900px) {
+      .hero, .layout { grid-template-columns: 1fr; }
+      .summary-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">OFFLINE LEDGER</p>
+        <h1>离线记账本</h1>
+        <p class="subtitle">双击打开即可使用。数据保存在当前浏览器的本地存储里，不经过服务器。</p>
+      </div>
+      <div id="summaryGrid" class="summary-grid"></div>
+    </section>
+
+    <section class="layout">
+      <section class="panel">
+        <h2>新增记录</h2>
+        <form id="entryForm" class="entry-form">
+          <label>
+            日期
+            <input type="date" id="entryDate" required>
+          </label>
+          <label>
+            分类
+            <input type="text" id="category" placeholder="如：餐饮、工资" required>
+          </label>
+          <label>
+            金额
+            <input type="number" id="amount" min="0.01" step="0.01" placeholder="0.00" required>
+          </label>
+          <label>
+            类型
+            <select id="type">
+              <option value="expense">支出</option>
+              <option value="income">收入</option>
+            </select>
+          </label>
+          <label>
+            币种
+            <select id="currency">
+              <option value="RMB" selected>RMB</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="HKD">HKD</option>
+              <option value="JPY">JPY</option>
+            </select>
+          </label>
+          <label>
+            备注
+            <textarea id="note" rows="3" placeholder="可选"></textarea>
+          </label>
+          <button type="submit">保存记录</button>
+        </form>
+        <div class="toolbar">
+          <button type="button" id="exportBtn" class="secondary">导出备份</button>
+          <button type="button" id="importBtn" class="secondary">导入备份</button>
+          <button type="button" id="clearBtn" class="warn">清空全部</button>
+        </div>
+        <input type="file" id="importFile" class="sr-only" accept="application/json">
+        <p class="hint">提示：数据按浏览器分别保存。更换浏览器或清除站点数据后，本地记录不会自动同步。</p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>账目明细</h2>
+          <span id="entryCount">0 条记录</span>
+        </div>
+        <div id="emptyState" class="empty-state">还没有记录，先添加第一笔账目。</div>
+        <div id="tableWrap" class="table-wrap" hidden>
+          <table>
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>分类</th>
+                <th>类型</th>
+                <th>币种</th>
+                <th>金额</th>
+                <th>备注</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="entryTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      var STORAGE_KEY = 'offline-ledger-entries-v1';
+      var CURRENCIES = ['RMB', 'USD', 'EUR', 'HKD', 'JPY'];
+      var form = document.getElementById('entryForm');
+      var entryDate = document.getElementById('entryDate');
+      var category = document.getElementById('category');
+      var amount = document.getElementById('amount');
+      var type = document.getElementById('type');
+      var currency = document.getElementById('currency');
+      var note = document.getElementById('note');
+      var summaryGrid = document.getElementById('summaryGrid');
+      var entryCount = document.getElementById('entryCount');
+      var emptyState = document.getElementById('emptyState');
+      var tableWrap = document.getElementById('tableWrap');
+      var entryTableBody = document.getElementById('entryTableBody');
+      var exportBtn = document.getElementById('exportBtn');
+      var importBtn = document.getElementById('importBtn');
+      var importFile = document.getElementById('importFile');
+      var clearBtn = document.getElementById('clearBtn');
+
+      entryDate.value = new Date().toISOString().slice(0, 10);
+
+      function loadEntries() {
+        try {
+          var raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) {
+            return [];
+          }
+          var parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed.map(function (entry, index) {
+            return normalizeEntry(entry, index);
+          }).filter(Boolean) : [];
+        } catch (error) {
+          console.error('读取本地数据失败:', error);
+          return [];
+        }
+      }
+
+      function saveEntries(entries) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+      }
+
+      function formatMoney(value) {
+        return Number(value || 0).toFixed(2);
+      }
+
+      function escapeHtml(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function normalizeEntry(entry, index) {
+        if (!entry || !entry.entryDate || !entry.category || Number(entry.amount) <= 0) {
+          return null;
+        }
+
+        var normalizedCurrency = CURRENCIES.indexOf(String(entry.currency || 'RMB').toUpperCase()) >= 0
+          ? String(entry.currency || 'RMB').toUpperCase()
+          : 'RMB';
+
+        return {
+          id: Number(entry.id) || Date.now() + Number(index || 0),
+          entryDate: String(entry.entryDate),
+          category: String(entry.category),
+          amount: Number(entry.amount),
+          type: entry.type === 'income' ? 'income' : 'expense',
+          currency: normalizedCurrency,
+          note: entry.note ? String(entry.note) : ''
+        };
+      }
+
+      function sortEntries(entries) {
+        return entries.slice().sort(function (a, b) {
+          if (a.entryDate === b.entryDate) {
+            return b.id - a.id;
+          }
+          return a.entryDate < b.entryDate ? 1 : -1;
+        });
+      }
+
+      function render() {
+        var entries = sortEntries(loadEntries());
+        var totalsByCurrency = {};
+
+        entryTableBody.innerHTML = '';
+
+        entries.forEach(function (entry) {
+          if (!totalsByCurrency[entry.currency]) {
+            totalsByCurrency[entry.currency] = { income: 0, expense: 0 };
+          }
+
+          if (entry.type === 'income') {
+            totalsByCurrency[entry.currency].income += Number(entry.amount);
+          } else {
+            totalsByCurrency[entry.currency].expense += Number(entry.amount);
+          }
+
+          var row = document.createElement('tr');
+          row.innerHTML = [
+            '<td>' + escapeHtml(entry.entryDate) + '</td>',
+            '<td>' + escapeHtml(entry.category) + '</td>',
+            '<td><span class="tag ' + escapeHtml(entry.type) + '">' + (entry.type === 'income' ? '收入' : '支出') + '</span></td>',
+            '<td>' + escapeHtml(entry.currency) + '</td>',
+            '<td class="' + (entry.type === 'income' ? 'income-text' : 'expense-text') + '">' + escapeHtml(entry.currency) + ' ' + formatMoney(entry.amount) + '</td>',
+            '<td>' + escapeHtml(entry.note || '-') + '</td>',
+            '<td><button type="button" class="delete-btn warn" data-id="' + entry.id + '">删除</button></td>'
+          ].join('');
+          entryTableBody.appendChild(row);
+        });
+
+        if (!totalsByCurrency.RMB) {
+          totalsByCurrency.RMB = { income: 0, expense: 0 };
+        }
+
+        var currencyKeys = Object.keys(totalsByCurrency).sort(function (a, b) {
+          if (a === 'RMB') {
+            return -1;
+          }
+          if (b === 'RMB') {
+            return 1;
+          }
+          return a.localeCompare(b);
+        });
+
+        summaryGrid.innerHTML = currencyKeys.map(function (currencyCode) {
+          var totals = totalsByCurrency[currencyCode];
+          var balance = totals.income - totals.expense;
+          return [
+            '<div class="card currency-card">',
+            '<span class="currency-label">' + escapeHtml(currencyCode) + '</span>',
+            '<div class="summary-item"><span>总收入</span><strong class="income-text">' + formatMoney(totals.income) + '</strong></div>',
+            '<div class="summary-item"><span>总支出</span><strong class="expense-text">' + formatMoney(totals.expense) + '</strong></div>',
+            '<div class="summary-item"><span>当前结余</span><strong>' + formatMoney(balance) + '</strong></div>',
+            '</div>'
+          ].join('');
+        }).join('');
+
+        entryCount.textContent = entries.length + ' 条记录';
+
+        var hasEntries = entries.length > 0;
+        emptyState.hidden = hasEntries;
+        tableWrap.hidden = !hasEntries;
+      }
+
+      function addEntry(event) {
+        event.preventDefault();
+
+        var nextEntry = {
+          id: Date.now(),
+          entryDate: entryDate.value,
+          category: category.value.trim(),
+          amount: Number(amount.value),
+          type: type.value,
+          currency: currency.value,
+          note: note.value.trim()
+        };
+
+        if (
+          !nextEntry.entryDate ||
+          !nextEntry.category ||
+          !Number.isFinite(nextEntry.amount) ||
+          nextEntry.amount <= 0 ||
+          CURRENCIES.indexOf(nextEntry.currency) < 0
+        ) {
+          window.alert('请填写完整且有效的记录信息。');
+          return;
+        }
+
+        var entries = loadEntries();
+        entries.push(nextEntry);
+        saveEntries(entries);
+
+        form.reset();
+        entryDate.value = new Date().toISOString().slice(0, 10);
+        type.value = 'expense';
+        currency.value = 'RMB';
+        render();
+      }
+
+      function deleteEntry(id) {
+        var entries = loadEntries().filter(function (entry) {
+          return entry.id !== id;
+        });
+        saveEntries(entries);
+        render();
+      }
+
+      function exportEntries() {
+        var entries = loadEntries();
+        var blob = new Blob([
+          JSON.stringify({ exportedAt: new Date().toISOString(), entries: entries }, null, 2)
+        ], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = 'ledger-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      function importEntries(file) {
+        var reader = new FileReader();
+        reader.onload = function () {
+          try {
+            var parsed = JSON.parse(String(reader.result || '{}'));
+            var entries = Array.isArray(parsed) ? parsed : parsed.entries;
+            if (!Array.isArray(entries)) {
+              throw new Error('invalid backup');
+            }
+            var normalized = entries.map(function (entry, index) {
+              return normalizeEntry(entry, index);
+            }).filter(Boolean);
+            saveEntries(normalized);
+            render();
+          } catch (error) {
+            console.error('导入失败:', error);
+            window.alert('导入失败，备份文件格式不正确。');
+          }
+        };
+        reader.readAsText(file, 'utf-8');
+      }
+
+      form.addEventListener('submit', addEntry);
+
+      entryTableBody.addEventListener('click', function (event) {
+        var target = event.target;
+        if (!(target instanceof HTMLElement)) {
+          return;
+        }
+        if (!target.matches('[data-id]')) {
+          return;
+        }
+        var id = Number(target.getAttribute('data-id'));
+        if (!Number.isFinite(id)) {
+          return;
+        }
+        deleteEntry(id);
+      });
+
+      exportBtn.addEventListener('click', exportEntries);
+      importBtn.addEventListener('click', function () { importFile.click(); });
+      importFile.addEventListener('change', function () {
+        if (importFile.files && importFile.files[0]) {
+          importEntries(importFile.files[0]);
+        }
+        importFile.value = '';
+      });
+      clearBtn.addEventListener('click', function () {
+        if (!window.confirm('确认清空全部账目吗？此操作不能撤销。')) {
+          return;
+        }
+        saveEntries([]);
+        render();
+      });
+
+      render();
+    }());
+  </script>
+</body>
+</html>

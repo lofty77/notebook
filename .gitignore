@@ -1,0 +1,11 @@
+.DS_Store
+.venv/
+__pycache__/
+tests/__pycache__/
+*.pyc
+
+# Local runtime data
+ledger.db
+
+# Exported backups
+ledger-backup-*.json
